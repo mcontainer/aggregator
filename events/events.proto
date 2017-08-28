@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package events;
+
+service EventService {
+
+    rpc PushEvent (stream Event) returns (stream EventSummary) { }
+
+}
+
+
+message Event {
+    string ipSrc = 1;
+    string ipDst = 2;
+    string stack = 4;
+    uint32 size = 5;
+}
+
+message EventSummary {
+    int32 count = 1;
+}
