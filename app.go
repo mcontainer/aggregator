@@ -2,10 +2,14 @@ package main
 
 import (
 	pb "docker-visualizer/docker-graph-aggregator/events"
+	"docker-visualizer/docker-graph-aggregator/graph"
+	"fmt"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"io"
+	"io/ioutil"
 	"net"
+	"os"
 )
 
 const (
@@ -35,6 +39,35 @@ func (s *server) PushEvent(stream pb.EventService_PushEventServer) error {
 }
 
 func main() {
+
+	conn, err := grpc.Dial(dgraph, grpc.WithInsecure())
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer conn.Close()
+
+	clientDir, err := ioutil.TempDir("", "client_")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer os.RemoveAll(clientDir)
+
+	graph := graph.NewGraphClient(conn, clientDir)
+
+	defer graph.Close()
+
+	resp, err := graph.Connect(pb.Event{
+		IpSrc: "10.0.0.5",
+		IpDst: "10.0.0.8",
+		Stack: "microservice",
+		Size:  10,
+	})
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(resp)
 
 	listener, err := net.Listen("tcp", ":10000")
 	if err != nil {
