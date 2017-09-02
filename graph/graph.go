@@ -28,6 +28,7 @@ type rootNode struct {
 }
 
 func NewGraphClient(connection *grpc.ClientConn, dir string) *GraphClient {
+	log.Info("Creating a graph client")
 	return &GraphClient{cli: client.NewDgraphClient([]*grpc.ClientConn{connection}, client.DefaultOptions, dir)}
 }
 
@@ -43,27 +44,45 @@ func (g *GraphClient) CreateRequestWithVariable(q string, v map[string]string) c
 	return req
 }
 
-func (g *GraphClient) AddEdge(r *client.Req, n client.Node, pred string, v interface{}) (err error) {
+func (g *GraphClient) AddFacet(e *client.Edge, key string, value string) {
+	e.AddFacet(key, value)
+}
+
+func (g *GraphClient) AddEdge(n client.Node, pred string, v interface{}) (*client.Edge, error) {
 	e := n.Edge(pred)
 	switch v.(type) {
 	case string:
-		err = e.SetValueString(v.(string))
+		err := e.SetValueString(v.(string))
 		if err != nil {
-			return err
+			return nil, err
 		}
-		err = r.Set(e)
+		return &e, nil
+	case int64:
+		err := e.SetValueInt(v.(int64))
 		if err != nil {
-			return err
+			return nil, err
 		}
-		return nil
+		return &e, nil
 	default:
-		return errors.New("Unknow type")
+		return nil, errors.New("Unknow type")
 	}
 }
 
-func (g *GraphClient) AddEdges(r *client.Req, n client.Node, p map[string]interface{}) (err error) {
+func (g *GraphClient) AddEdges(n client.Node, p map[string]interface{}) (array []*client.Edge, err error) {
 	for k, v := range p {
-		if err = g.AddEdge(r, n, k, v); err != nil {
+		e, err := g.AddEdge(n, k, v)
+		if err != nil {
+			return nil, err
+		}
+		array = append(array, e)
+	}
+	return array, nil
+}
+
+func (g *GraphClient) AddToRequest(req *client.Req, array []*client.Edge) (err error) {
+	for _, e := range array {
+		err = req.Set(*e)
+		if err != nil {
 			return err
 		}
 	}
@@ -105,7 +124,11 @@ func (g *GraphClient) Connect(event pb.Event) (*protos.Response, error) {
 		if err != nil {
 			return nil, err
 		}
-		err = g.AddEdges(&req, newNode, params)
+		array, err := g.AddEdges(newNode, params)
+		if err != nil {
+			return nil, err
+		}
+		err = g.AddToRequest(&req, array)
 		if err != nil {
 			return nil, err
 		}
@@ -120,8 +143,8 @@ func (g *GraphClient) Connect(event pb.Event) (*protos.Response, error) {
 		if err != nil {
 			return nil, err
 		}
-
 		newNode = g.cli.NodeUid(r.UID)
+
 	}
 
 	req = client.Req{}
@@ -137,7 +160,11 @@ func (g *GraphClient) Connect(event pb.Event) (*protos.Response, error) {
 		if err != nil {
 			return nil, err
 		}
-		err = g.AddEdges(&req, targetNode, params)
+		array, err := g.AddEdges(targetNode, params)
+		if err != nil {
+			return nil, err
+		}
+		err = g.AddToRequest(&req, array)
 		if err != nil {
 			return nil, err
 		}
@@ -152,14 +179,14 @@ func (g *GraphClient) Connect(event pb.Event) (*protos.Response, error) {
 		if err != nil {
 			return nil, err
 		}
+		fmt.Println(*target)
 		targetNode = g.cli.NodeUid(target.UID)
 	}
 
 	req = client.Req{}
-	fmt.Println(targetNode)
-	fmt.Println(newNode)
 
 	e := targetNode.ConnectTo("connected", newNode)
+	//e.AddFacet("weight", strconv.Itoa(int(weight)))
 	err = req.Set(e)
 	if err != nil {
 		return nil, err
@@ -176,6 +203,9 @@ func (g *GraphClient) FindNodeByIp(ip string) (n *node, err error) {
 	  node(func: eq(ip, $ip)) {
 		_uid_
 		name
+		ip
+		stack
+		connected @facets
 	  }
 	}`
 	m := make(map[string]string)
@@ -195,13 +225,11 @@ func (g *GraphClient) FindNodeByIp(ip string) (n *node, err error) {
 
 func (g *GraphClient) FindByStack(stack string) (nodes *[]node, err error) {
 	q := `{
-	  node(func: anyofterms(stack, $stack)) {
-	  	_uid_
-		expand(_all_) {
-		  ip
-		  name
-		  connected
-		}
+	  node(func: eq(stack, $stack)) {
+		_uid_
+		name
+		connected
+		ip
 	  }
 	}`
 	m := make(map[string]string)

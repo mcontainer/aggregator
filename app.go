@@ -3,6 +3,7 @@ package main
 import (
 	pb "docker-visualizer/docker-graph-aggregator/events"
 	"docker-visualizer/docker-graph-aggregator/graph"
+	"docker-visualizer/docker-graph-aggregator/sse"
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -16,7 +17,10 @@ const (
 	dgraph = "127.0.0.1:9080"
 )
 
-type server struct{}
+type server struct {
+	graph    *graph.GraphClient
+	streamer *chan string
+}
 
 func (s *server) PushEvent(stream pb.EventService_PushEventServer) error {
 	for {
@@ -35,10 +39,31 @@ func (s *server) PushEvent(stream pb.EventService_PushEventServer) error {
 			"stack":       event.Stack,
 		}).Info("Received")
 
+		resp, err := s.graph.Connect(pb.Event{
+			IpSrc: event.IpSrc,
+			IpDst: event.IpDst,
+			Stack: "microservice",
+			Size:  event.Size,
+		})
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		log.Info("Add data to graph")
+
+		*s.streamer <- event.IpSrc + " - " + event.IpDst + " - " + event.Stack
+
+		fmt.Println(resp)
+
 	}
 }
 
 func main() {
+
+	streamPipe := make(chan string)
+
+	go sse.Start(&streamPipe)
 
 	conn, err := grpc.Dial(dgraph, grpc.WithInsecure())
 	if err != nil {
@@ -56,26 +81,14 @@ func main() {
 
 	defer graph.Close()
 
-	resp, err := graph.Connect(pb.Event{
-		IpSrc: "10.0.0.5",
-		IpDst: "10.0.0.8",
-		Stack: "microservice",
-		Size:  10,
-	})
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println(resp)
-
 	listener, err := net.Listen("tcp", ":10000")
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	log.Info("Starting grpc server")
 	grpcServer := grpc.NewServer()
-	pb.RegisterEventServiceServer(grpcServer, &server{})
+	pb.RegisterEventServiceServer(grpcServer, &server{graph: graph, streamer: &streamPipe})
 	grpcServer.Serve(listener)
 
 }
