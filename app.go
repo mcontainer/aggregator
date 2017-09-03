@@ -4,6 +4,7 @@ import (
 	pb "docker-visualizer/docker-graph-aggregator/events"
 	"docker-visualizer/docker-graph-aggregator/graph"
 	"docker-visualizer/docker-graph-aggregator/sse"
+	"encoding/json"
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -11,6 +12,7 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
+	"time"
 )
 
 const (
@@ -19,7 +21,7 @@ const (
 
 type server struct {
 	graph    *graph.GraphClient
-	streamer *chan string
+	streamer *chan []byte
 }
 
 func (s *server) PushEvent(stream pb.EventService_PushEventServer) error {
@@ -52,7 +54,7 @@ func (s *server) PushEvent(stream pb.EventService_PushEventServer) error {
 
 		log.Info("Add data to graph")
 
-		*s.streamer <- event.IpSrc + " - " + event.IpDst + " - " + event.Stack
+		*s.streamer <- []byte(event.IpSrc + " - " + event.IpDst + " - " + event.Stack)
 
 		fmt.Println(resp)
 
@@ -61,7 +63,7 @@ func (s *server) PushEvent(stream pb.EventService_PushEventServer) error {
 
 func main() {
 
-	streamPipe := make(chan string)
+	streamPipe := make(chan []byte)
 
 	go sse.Start(&streamPipe)
 
@@ -78,6 +80,24 @@ func main() {
 	defer os.RemoveAll(clientDir)
 
 	graph := graph.NewGraphClient(conn, clientDir)
+
+	go func() {
+		tick := time.Tick(2 * time.Second)
+		for {
+			select {
+			case <-tick:
+				resp, err := graph.FindByStack("microservice")
+				if err != nil {
+					log.Fatal(err)
+				}
+				b, err := json.Marshal(resp)
+				if err != nil {
+					log.Fatal(err)
+				}
+				streamPipe <- b
+			}
+		}
+	}()
 
 	defer graph.Close()
 

@@ -24,12 +24,12 @@ func newSSE() *Broker {
 	return broker
 }
 
-func Start(streamer *chan string) {
+func Start(streamer *chan []byte) {
 	log.Info("Starting Server sent event")
 	b := newSSE()
 	go func() {
 		for {
-			b.Notifier <- []byte(<-*streamer)
+			b.Notifier <- <-*streamer
 		}
 	}()
 	http.Handle("/streaming", b)
@@ -67,7 +67,8 @@ func (b *Broker) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:4200")
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
 
 	messageChan := make(chan []byte)
 

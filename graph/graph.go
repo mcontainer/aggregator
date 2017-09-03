@@ -24,7 +24,7 @@ type node struct {
 }
 
 type rootNode struct {
-	Root []node `dgraph:"node"`
+	Root []node `dgraph:"recurse"`
 }
 
 func NewGraphClient(connection *grpc.ClientConn, dir string) *GraphClient {
@@ -186,7 +186,7 @@ func (g *GraphClient) Connect(event pb.Event) (*protos.Response, error) {
 	req = client.Req{}
 
 	e := targetNode.ConnectTo("connected", newNode)
-	//e.AddFacet("weight", strconv.Itoa(int(weight)))
+	//e.AddFacet("weight", strconv.Itoa(36))
 	err = req.Set(e)
 	if err != nil {
 		return nil, err
@@ -200,12 +200,12 @@ func (g *GraphClient) Connect(event pb.Event) (*protos.Response, error) {
 
 func (g *GraphClient) FindNodeByIp(ip string) (n *node, err error) {
 	q := `{
-	  node(func: eq(ip, $ip)) {
+	  recurse(func: eq(ip, $ip)) {
 		_uid_
 		name
 		ip
 		stack
-		connected @facets
+		connected
 	  }
 	}`
 	m := make(map[string]string)
@@ -225,9 +225,10 @@ func (g *GraphClient) FindNodeByIp(ip string) (n *node, err error) {
 
 func (g *GraphClient) FindByStack(stack string) (nodes *[]node, err error) {
 	q := `{
-	  node(func: eq(stack, $stack)) {
+	  recurse(func: eq(stack, $stack)) {
 		_uid_
 		name
+		stack
 		connected
 		ip
 	  }
@@ -239,6 +240,7 @@ func (g *GraphClient) FindByStack(stack string) (nodes *[]node, err error) {
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println(resp)
 	var root rootNode
 	err = client.Unmarshal(resp.N, &root)
 	if err != nil {
