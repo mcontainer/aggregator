@@ -2,7 +2,7 @@ package graph
 
 import (
 	"context"
-	pb "docker-visualizer/docker-graph-aggregator/events"
+	pb "docker-visualizer/proto/events"
 	"errors"
 	"fmt"
 	"github.com/dgraph-io/dgraph/client"

@@ -1,9 +1,9 @@
 package main
 
 import (
-	pb "docker-visualizer/docker-graph-aggregator/events"
 	"docker-visualizer/docker-graph-aggregator/graph"
 	"docker-visualizer/docker-graph-aggregator/sse"
+	pb "docker-visualizer/proto/events"
 	"encoding/json"
 	"fmt"
 	log "github.com/sirupsen/logrus"
