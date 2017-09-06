@@ -3,10 +3,11 @@ package main
 import (
 	"docker-visualizer/docker-graph-aggregator/graph"
 	"docker-visualizer/docker-graph-aggregator/sse"
-	pb "docker-visualizer/proto/events"
+	pb "docker-visualizer/proto/containers"
 	"encoding/json"
 	"fmt"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"io"
 	"io/ioutil"
@@ -24,7 +25,15 @@ type server struct {
 	streamer *chan []byte
 }
 
-func (s *server) PushEvent(stream pb.EventService_PushEventServer) error {
+func (s *server) AddNode(ctx context.Context, containers *pb.ContainerInfo) (*pb.Response, error) {
+	e := s.graph.InsertNode(containers)
+	if e != nil {
+		return nil, e
+	}
+	return &pb.Response{Success: true}, nil
+}
+
+func (s *server) StreamContainerEvents(stream pb.ContainerService_StreamContainerEventsServer) error {
 	for {
 		event, err := stream.Recv()
 		if err == io.EOF {
@@ -41,7 +50,7 @@ func (s *server) PushEvent(stream pb.EventService_PushEventServer) error {
 			"stack":       event.Stack,
 		}).Info("Received")
 
-		resp, err := s.graph.Connect(pb.Event{
+		resp, err := s.graph.Connect(pb.ContainerEvent{
 			IpSrc: event.IpSrc,
 			IpDst: event.IpDst,
 			Stack: "microservice",
@@ -108,7 +117,7 @@ func main() {
 
 	log.Info("Starting grpc server")
 	grpcServer := grpc.NewServer()
-	pb.RegisterEventServiceServer(grpcServer, &server{graph: graph, streamer: &streamPipe})
+	pb.RegisterContainerServiceServer(grpcServer, &server{graph: graph, streamer: &streamPipe})
 	grpcServer.Serve(listener)
 
 }

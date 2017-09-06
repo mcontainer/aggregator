@@ -2,7 +2,7 @@ package graph
 
 import (
 	"context"
-	pb "docker-visualizer/proto/events"
+	pb "docker-visualizer/proto/containers"
 	"errors"
 	"fmt"
 	"github.com/dgraph-io/dgraph/client"
@@ -108,7 +108,34 @@ func (g *GraphClient) Exist(stack, ip, name string) (bool, error) {
 	return len(resp.N[0].Children) > 0, nil
 }
 
-func (g *GraphClient) Connect(event pb.Event) (*protos.Response, error) {
+func (g *GraphClient) InsertNode(info *pb.ContainerInfo) error {
+	req := client.Req{}
+	n, e := g.cli.NodeBlank("")
+	params := make(map[string]interface{})
+	params["name"] = info.Name
+	params["id"] = info.Id
+	params["service"] = info.Service
+	params["ip"] = info.Ip
+	params["network"] = info.Network
+	params["stack"] = info.Stack
+	if e != nil {
+		return e
+	}
+	array, e := g.AddEdges(n, params)
+	if e != nil {
+		return e
+	}
+	e = g.AddToRequest(&req, array)
+	if e != nil {
+		return e
+	}
+	if _, e := g.run(req); e != nil {
+		return e
+	}
+	return nil
+}
+
+func (g *GraphClient) Connect(event pb.ContainerEvent) (*protos.Response, error) {
 	req := client.Req{}
 	var newNode client.Node
 	var targetNode client.Node
