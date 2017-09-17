@@ -5,7 +5,6 @@ import (
 	"docker-visualizer/docker-graph-aggregator/sse"
 	pb "docker-visualizer/proto/containers"
 	"encoding/json"
-	"fmt"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -20,16 +19,50 @@ const (
 	dgraph = "127.0.0.1:9080"
 )
 
+type clientEvent struct {
+	Action  string        `json:"action"`
+	Payload *[]graph.Node `json:"payload"`
+}
+
 type server struct {
 	graph    *graph.GraphClient
 	streamer *chan []byte
 }
 
 func (s *server) AddNode(ctx context.Context, containers *pb.ContainerInfo) (*pb.Response, error) {
-	e := s.graph.InsertNode(containers)
+	log.WithField("Node", containers).Info("Inserting node")
+	exist, e := s.graph.ExistID(containers.Id)
+	if e != nil {
+		log.Fatal(e)
+	}
+	if !exist {
+		e := s.graph.InsertNode(containers)
+		if e != nil {
+			return nil, e
+		}
+	} else {
+		log.Info("Node " + containers.Id + " already exists")
+	}
+	return &pb.Response{Success: true}, nil
+}
+
+func (s *server) RemoveNode(ctx context.Context, containers *pb.ContainerID) (*pb.Response, error) {
+	e := s.graph.DeleteNode(containers.Id)
 	if e != nil {
 		return nil, e
 	}
+	n := graph.Node{
+		Id: containers.Id,
+	}
+	event := clientEvent{
+		Action:  "DELETE",
+		Payload: &[]graph.Node{n},
+	}
+	b, err := json.Marshal(event)
+	if err != nil {
+		log.Fatal(err)
+	}
+	*s.streamer <- b
 	return &pb.Response{Success: true}, nil
 }
 
@@ -50,23 +83,15 @@ func (s *server) StreamContainerEvents(stream pb.ContainerService_StreamContaine
 			"stack":       event.Stack,
 		}).Info("Received")
 
-		resp, err := s.graph.Connect(pb.ContainerEvent{
+		if _, err := s.graph.Connect(pb.ContainerEvent{
 			IpSrc: event.IpSrc,
 			IpDst: event.IpDst,
-			Stack: "microservice",
+			Stack: event.Stack,
 			Size:  event.Size,
-		})
-
-		if err != nil {
+			Host:  event.Host,
+		}); err != nil {
 			log.Fatal(err)
 		}
-
-		log.Info("Add data to graph")
-
-		*s.streamer <- []byte(event.IpSrc + " - " + event.IpDst + " - " + event.Stack)
-
-		fmt.Println(resp)
-
 	}
 }
 
@@ -88,18 +113,27 @@ func main() {
 	}
 	defer os.RemoveAll(clientDir)
 
-	graph := graph.NewGraphClient(conn, clientDir)
+	g := graph.NewGraphClient(conn, clientDir)
+	err = g.InitializedSchema()
+
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	go func() {
 		tick := time.Tick(2 * time.Second)
 		for {
 			select {
 			case <-tick:
-				resp, err := graph.FindByStack("microservice")
+				resp, err := g.FindByStack("microservice")
 				if err != nil {
 					log.Fatal(err)
 				}
-				b, err := json.Marshal(resp)
+				event := clientEvent{
+					Action:  "NONE",
+					Payload: resp,
+				}
+				b, err := json.Marshal(event)
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -108,7 +142,7 @@ func main() {
 		}
 	}()
 
-	defer graph.Close()
+	defer g.Close()
 
 	listener, err := net.Listen("tcp", ":10000")
 	if err != nil {
@@ -117,7 +151,7 @@ func main() {
 
 	log.Info("Starting grpc server")
 	grpcServer := grpc.NewServer()
-	pb.RegisterContainerServiceServer(grpcServer, &server{graph: graph, streamer: &streamPipe})
+	pb.RegisterContainerServiceServer(grpcServer, &server{graph: g, streamer: &streamPipe})
 	grpcServer.Serve(listener)
 
 }
