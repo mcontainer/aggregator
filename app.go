@@ -60,7 +60,8 @@ func (s *server) RemoveNode(ctx context.Context, containers *pb.ContainerID) (*p
 	}
 	b, err := json.Marshal(event)
 	if err != nil {
-		log.Fatal(err)
+		log.Warn(err)
+		return nil, err
 	}
 	*s.streamer <- b
 	return &pb.Response{Success: true}, nil
@@ -90,7 +91,7 @@ func (s *server) StreamContainerEvents(stream pb.ContainerService_StreamContaine
 			Size:  event.Size,
 			Host:  event.Host,
 		}); err != nil {
-			log.Fatal(err)
+			log.Warn(err)
 		}
 	}
 }

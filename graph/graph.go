@@ -209,79 +209,18 @@ func (g *GraphClient) Connect(event pb.ContainerEvent) (*protos.Response, error)
 	var newNode client.Node
 	var targetNode client.Node
 	var err error
-	//exist, _ := g.Exist(event.Stack, event.IpDst, event.Host)
-	//if !exist {
-	//	log.Info("Creating new Node")
-	//	newNode, err = g.cli.NodeBlank("")
-	//	params := make(map[string]interface{})
-	//	params["name"] = "core"
-	//	params["stack"] = event.Stack
-	//	params["ip"] = event.IpDst
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//	array, err := g.AddEdges(newNode, params)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//	err = g.AddToRequest(&req, array)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//	if _, err := g.run(req); err != nil {
-	//		return nil, err
-	//	}
-	//	r, _ := g.FindNodeByIp(event.IpDst)
-	//	newNode = g.cli.NodeUid(r.UID)
-	//	log.Info("OK")
-	//} else {
 	r, err := g.FindNodeByIp(event.IpDst)
 	if err != nil {
 		return nil, err
 	}
 	newNode = g.cli.NodeUid(r.UID)
 
-	//}
-
-	req = client.Req{}
-	//exist, _ = g.Exist(event.Stack, event.IpSrc, "Client")
-	//
-	//if !exist {
-	//	log.Info("Creating target Node")
-	//	targetNode, err = g.cli.NodeBlank("")
-	//	params := make(map[string]interface{})
-	//	params["name"] = "Client"
-	//	params["stack"] = event.Stack
-	//	params["ip"] = event.IpSrc
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//	array, err := g.AddEdges(targetNode, params)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//	err = g.AddToRequest(&req, array)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//	if _, err := g.run(req); err != nil {
-	//		return nil, err
-	//	}
-	//	r, _ := g.FindNodeByIp(event.IpSrc)
-	//	targetNode = g.cli.NodeUid(r.UID)
-	//	log.Info("OK")
-	//} else {
 	target, err := g.FindNodeByIp(event.IpSrc)
 	if err != nil {
 		return nil, err
 	}
 	targetNode = g.cli.NodeUid(target.UID)
-	//}
-
-	req = client.Req{}
-
 	e := targetNode.ConnectTo("connected", newNode)
-	//e.AddFacet("weight", strconv.Itoa(36))
 	err = req.Set(e)
 	if err != nil {
 		return nil, err
@@ -320,7 +259,10 @@ func (g *GraphClient) FindNodeById(id string) (n *Node, err error) {
 	if err != nil {
 		return nil, err
 	}
-	return &node.Root[0], nil
+	if len(node.Root) > 0 {
+		return &node.Root[0], nil
+	}
+	return nil, errors.New("Not found node with id " + id)
 }
 
 func (g *GraphClient) FindNodeByIp(ip string) (n *Node, err error) {
@@ -350,7 +292,10 @@ func (g *GraphClient) FindNodeByIp(ip string) (n *Node, err error) {
 	if err != nil {
 		return nil, err
 	}
-	return &node.Root[0], nil
+	if len(node.Root) > 0 {
+		return &node.Root[0], nil
+	}
+	return nil, errors.New("Not found node with ip " + ip)
 }
 
 func (g *GraphClient) FindByStack(stack string) (nodes *[]Node, err error) {
