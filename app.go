@@ -33,7 +33,8 @@ func (s *server) AddNode(ctx context.Context, containers *pb.ContainerInfo) (*pb
 	log.WithField("Node", containers).Info("Inserting node")
 	exist, e := s.graph.ExistID(containers.Id)
 	if e != nil {
-		log.Fatal(e)
+		log.WithField("error", e).Warn("Add node")
+		return nil, e
 	}
 	if !exist {
 		e := s.graph.InsertNode(containers)

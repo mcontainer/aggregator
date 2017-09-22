@@ -120,7 +120,6 @@ func (g *GraphClient) ExistID(id string) (bool, error) {
 	q := `{
 	  exist(func: eq(id, $id)) {
 		_uid_
-		name
 	  }
 	}`
 	p := make(map[string]string)
@@ -129,6 +128,9 @@ func (g *GraphClient) ExistID(id string) (bool, error) {
 	resp, err := g.run(req)
 	if err != nil {
 		return false, err
+	}
+	if len(resp.N) == 0 {
+		return false, errors.New("response array is empty")
 	}
 	return len(resp.N[0].Children) > 0, nil
 }
@@ -148,6 +150,9 @@ func (g *GraphClient) Exist(stack, ip, host string) (bool, error) {
 	resp, err := g.run(req)
 	if err != nil {
 		return false, err
+	}
+	if len(resp.N) == 0 {
+		return false, errors.New("response array is empty")
 	}
 	return len(resp.N[0].Children) > 0, nil
 }
