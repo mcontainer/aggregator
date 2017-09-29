@@ -5,12 +5,14 @@ import (
 	"docker-visualizer/docker-graph-aggregator/sse"
 	pb "docker-visualizer/proto/containers"
 	"encoding/json"
+	"github.com/julienschmidt/httprouter"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"io"
 	"io/ioutil"
 	"net"
+	"net/http"
 	"os"
 	"time"
 )
@@ -20,8 +22,8 @@ const (
 )
 
 type clientEvent struct {
-	Action  string        `json:"action"`
-	Payload *[]graph.Node `json:"payload"`
+	Action  string      `json:"action"`
+	Payload interface{} `json:"payload"`
 }
 
 type server struct {
@@ -38,6 +40,16 @@ func (s *server) AddNode(ctx context.Context, containers *pb.ContainerInfo) (*pb
 	}
 	if !exist {
 		e := s.graph.InsertNode(containers)
+		event := clientEvent{
+			Action:  "ADD",
+			Payload: containers,
+		}
+		b, err := json.Marshal(event)
+		if err != nil {
+			log.Warn(err)
+			return nil, err
+		}
+		*s.streamer <- b
 		if e != nil {
 			return nil, e
 		}
@@ -52,12 +64,9 @@ func (s *server) RemoveNode(ctx context.Context, containers *pb.ContainerID) (*p
 	if e != nil {
 		return nil, e
 	}
-	n := graph.Node{
-		Id: containers.Id,
-	}
 	event := clientEvent{
 		Action:  "DELETE",
-		Payload: &[]graph.Node{n},
+		Payload: containers,
 	}
 	b, err := json.Marshal(event)
 	if err != nil {
@@ -85,16 +94,43 @@ func (s *server) StreamContainerEvents(stream pb.ContainerService_StreamContaine
 			"stack":       event.Stack,
 		}).Info("Received")
 
-		if _, err := s.graph.Connect(pb.ContainerEvent{
-			IpSrc: event.IpSrc,
-			IpDst: event.IpDst,
-			Stack: event.Stack,
-			Size:  event.Size,
-			Host:  event.Host,
-		}); err != nil {
+		connection, err := s.graph.Connect(event)
+		if err != nil {
 			log.Warn(err)
+			return nil
 		}
+
+		data := clientEvent{
+			Action:  "CONNECT",
+			Payload: connection,
+		}
+		b, err := json.Marshal(data)
+		if err != nil {
+			log.Warn(err)
+			return err
+		}
+		*s.streamer <- b
+
 	}
+}
+
+func startServer(g *graph.GraphClient) {
+	router := httprouter.New()
+	router.GET("/topology/:stack", func(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+		resp, err := g.FindByStack(params.ByName("stack"))
+		if err != nil {
+			log.Fatal(err)
+		}
+		b, err := json.Marshal(resp)
+		if err != nil {
+			log.Warn(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Write(b)
+	})
+	log.Fatal(http.ListenAndServe(":8081", router))
 }
 
 func main() {
@@ -116,6 +152,9 @@ func main() {
 	defer os.RemoveAll(clientDir)
 
 	g := graph.NewGraphClient(conn, clientDir)
+
+	go startServer(g)
+
 	err = g.InitializedSchema()
 
 	if err != nil {

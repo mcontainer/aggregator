@@ -33,6 +33,12 @@ type rootNode struct {
 	Root []Node `dgraph:"recurse"`
 }
 
+type Connection struct {
+	Src  string `json:"source"`
+	Dst  string `json:"destination"`
+	Size uint32 `json:"size"`
+}
+
 func NewGraphClient(connection *grpc.ClientConn, dir string) *GraphClient {
 	log.Info("Creating a graph client")
 	return &GraphClient{cli: client.NewDgraphClient([]*grpc.ClientConn{connection}, client.DefaultOptions, dir)}
@@ -91,7 +97,7 @@ func (g *GraphClient) AddEdge(n client.Node, pred string, v interface{}) (*clien
 		}
 		return &e, nil
 	default:
-		return nil, errors.New("Unknow type")
+		return nil, errors.New("unknown type")
 	}
 }
 
@@ -209,7 +215,7 @@ func (g *GraphClient) InsertNode(info *pb.ContainerInfo) error {
 	return nil
 }
 
-func (g *GraphClient) Connect(event pb.ContainerEvent) (*protos.Response, error) {
+func (g *GraphClient) Connect(event *pb.ContainerEvent) (*Connection, error) {
 	req := client.Req{}
 	var newNode client.Node
 	var targetNode client.Node
@@ -230,11 +236,11 @@ func (g *GraphClient) Connect(event pb.ContainerEvent) (*protos.Response, error)
 	if err != nil {
 		return nil, err
 	}
-	resp, err := g.run(req)
-	if err != nil {
+	if _, err := g.run(req); err != nil {
 		return nil, err
 	}
-	return resp, nil
+
+	return &Connection{Src: r.Id, Dst: target.Id, Size: event.Size}, nil
 }
 
 func (g *GraphClient) FindNodeById(id string) (n *Node, err error) {
