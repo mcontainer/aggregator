@@ -60,20 +60,25 @@ func (s *server) AddNode(ctx context.Context, containers *pb.ContainerInfo) (*pb
 }
 
 func (s *server) RemoveNode(ctx context.Context, containers *pb.ContainerID) (*pb.Response, error) {
-	e := s.graph.DeleteNode(containers.Id)
-	if e != nil {
-		return nil, e
+	exist, _ := s.graph.ExistID(containers.Id)
+	if exist {
+		e := s.graph.DeleteNode(containers.Id)
+		if e != nil {
+			log.Warn(e)
+		} else {
+			event := clientEvent{
+				Action:  "DELETE",
+				Payload: containers,
+			}
+			b, err := json.Marshal(event)
+			if err != nil {
+				log.Warn(err)
+			} else {
+				*s.streamer <- b
+			}
+		}
 	}
-	event := clientEvent{
-		Action:  "DELETE",
-		Payload: containers,
-	}
-	b, err := json.Marshal(event)
-	if err != nil {
-		log.Warn(err)
-		return nil, err
-	}
-	*s.streamer <- b
+
 	return &pb.Response{Success: true}, nil
 }
 
@@ -97,19 +102,18 @@ func (s *server) StreamContainerEvents(stream pb.ContainerService_StreamContaine
 		connection, err := s.graph.Connect(event)
 		if err != nil {
 			log.Warn(err)
-			return nil
+		} else {
+			data := clientEvent{
+				Action:  "CONNECT",
+				Payload: connection,
+			}
+			b, err := json.Marshal(data)
+			if err != nil {
+				log.Warn(err)
+			} else {
+				*s.streamer <- b
+			}
 		}
-
-		data := clientEvent{
-			Action:  "CONNECT",
-			Payload: connection,
-		}
-		b, err := json.Marshal(data)
-		if err != nil {
-			log.Warn(err)
-			return err
-		}
-		*s.streamer <- b
 
 	}
 }

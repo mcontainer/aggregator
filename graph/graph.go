@@ -164,15 +164,18 @@ func (g *GraphClient) Exist(stack, ip, host string) (bool, error) {
 }
 
 func (g *GraphClient) DeleteNode(id string) error {
+	log.WithField("id", id).Info("Graph:: DeleteNode")
 	var b bytes.Buffer
 	n, e := g.FindNodeById(id)
 	if e != nil {
 		return e
 	}
-	b.WriteString("<0x" + strconv.FormatUint(n.UID, 16) + "> * * .\n")
+
+	log.Info("Start deleting node " + id)
 	for _, v := range n.Parents {
 		b.WriteString("<0x" + strconv.FormatUint(v.UID, 16) + "> <connected> <0x" + strconv.FormatUint(n.UID, 16) + "> .\n")
 	}
+	b.WriteString("<0x" + strconv.FormatUint(n.UID, 16) + "> * * .\n")
 	q := `mutation {
 	delete {
 		` + b.String() + `

@@ -33,7 +33,7 @@ func Start(streamer *chan []byte) {
 		}
 	}()
 	http.Handle("/streaming", b)
-	log.Fatal("HTTP server error: ", http.ListenAndServe("localhost:1234", nil))
+	log.Fatal("HTTP server error: ", http.ListenAndServe(":1234", nil))
 }
 
 func (b *Broker) listen() {
