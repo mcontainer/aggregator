@@ -1,5 +1,5 @@
-BINARY = processor
-DIR = docker-graph-aggregator
+BINARY = aggregator
+DIR = aggregator
 GOARCH = amd64
 PREFIX="[INFO]::"
 VERSION=1.0

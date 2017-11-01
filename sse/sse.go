@@ -7,15 +7,22 @@ import (
 )
 
 type Broker struct {
-	Notifier         chan []byte
+	notifier         chan []byte
 	incomingClients  chan chan []byte
 	outcomingClients chan chan []byte
 	clients          map[chan []byte]bool
 }
 
-func newSSE() *Broker {
+type IBroker interface {
+	ServeHTTP(w http.ResponseWriter, req *http.Request)
+	listen()
+	close(message chan []byte)
+	getNotifier() chan []byte
+}
+
+func newSSE() IBroker {
 	broker := &Broker{
-		Notifier:         make(chan []byte, 1),
+		notifier:         make(chan []byte, 1),
 		incomingClients:  make(chan chan []byte),
 		outcomingClients: make(chan chan []byte),
 		clients:          make(map[chan []byte]bool),
@@ -29,11 +36,15 @@ func Start(streamer *chan []byte) {
 	b := newSSE()
 	go func() {
 		for {
-			b.Notifier <- <-*streamer
+			b.getNotifier() <- <-*streamer
 		}
 	}()
 	http.Handle("/streaming", b)
 	log.Fatal("HTTP server error: ", http.ListenAndServe(":1234", nil))
+}
+
+func (b *Broker) getNotifier() chan []byte {
+	return b.notifier
 }
 
 func (b *Broker) listen() {
@@ -45,7 +56,7 @@ func (b *Broker) listen() {
 		case x := <-b.outcomingClients:
 			delete(b.clients, x)
 			log.WithField("clients size", len(b.clients)).Info("Delete client")
-		case x := <-b.Notifier:
+		case x := <-b.notifier:
 			for channel := range b.clients {
 				channel <- x
 			}
@@ -83,7 +94,11 @@ func (b *Broker) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}()
 
 	for {
-		fmt.Fprintf(w, "data: %s\n\n", <-messageChan)
+		message, opened := <-messageChan
+		if !opened {
+			break
+		}
+		fmt.Fprintf(w, "data: %s\n\n", message)
 		flusher.Flush()
 	}
 
