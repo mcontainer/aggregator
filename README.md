@@ -1,4 +1,4 @@
-# docker-graph-aggregator
+# aggregator
 
 ## Author
 
