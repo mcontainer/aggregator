@@ -9,7 +9,7 @@ import (
 )
 
 type Handler struct {
-	graph *graph.GraphClient
+	graph graph.IGraph
 }
 
 type RestServer struct {
@@ -35,7 +35,7 @@ func (h *Handler) fetchTopologyByStack(w http.ResponseWriter, r *http.Request, p
 	w.Write(b)
 }
 
-func NewRestServer(graph *graph.GraphClient) IRestServer {
+func NewRestServer(graph graph.IGraph) IRestServer {
 	router := httprouter.New()
 	h := &Handler{graph: graph}
 	router.GET("/topology/:stack", h.fetchTopologyByStack)

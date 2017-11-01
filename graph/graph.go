@@ -39,7 +39,27 @@ type Connection struct {
 	Size uint32 `json:"size"`
 }
 
-func NewGraphClient(connection *grpc.ClientConn, dir string) *GraphClient {
+type IGraph interface {
+	InitializedSchema() error
+	createRequest(q string) client.Req
+	createRequestWithVariable(q string, v map[string]string) client.Req
+	addFacet(e *client.Edge, key string, value string)
+	addEdge(n client.Node, pred string, v interface{}) (*client.Edge, error)
+	addEdges(n client.Node, p map[string]interface{}) (array []*client.Edge, err error)
+	addToRequest(req *client.Req, array []*client.Edge) (err error)
+	ExistID(id string) (bool, error)
+	Exist(stack, ip, host string) (bool, error)
+	DeleteNode(id string) error
+	InsertNode(info *pb.ContainerInfo) error
+	Connect(event *pb.ContainerEvent) (*Connection, error)
+	FindNodeById(id string) (n *Node, err error)
+	FindNodeByIp(ip string) (n *Node, err error)
+	FindByStack(stack string) (nodes *[]Node, err error)
+	run(request client.Req) (*protos.Response, error)
+	Close()
+}
+
+func NewGraphClient(connection *grpc.ClientConn, dir string) IGraph {
 	log.Info("Creating a graph client")
 	return &GraphClient{cli: client.NewDgraphClient([]*grpc.ClientConn{connection}, client.DefaultOptions, dir)}
 }
@@ -65,23 +85,23 @@ func (g *GraphClient) InitializedSchema() error {
 	return nil
 }
 
-func (g *GraphClient) CreateRequest(q string) client.Req {
+func (g *GraphClient) createRequest(q string) client.Req {
 	req := client.Req{}
 	req.SetQuery(q)
 	return req
 }
 
-func (g *GraphClient) CreateRequestWithVariable(q string, v map[string]string) client.Req {
+func (g *GraphClient) createRequestWithVariable(q string, v map[string]string) client.Req {
 	req := client.Req{}
 	req.SetQueryWithVariables(q, v)
 	return req
 }
 
-func (g *GraphClient) AddFacet(e *client.Edge, key string, value string) {
+func (g *GraphClient) addFacet(e *client.Edge, key string, value string) {
 	e.AddFacet(key, value)
 }
 
-func (g *GraphClient) AddEdge(n client.Node, pred string, v interface{}) (*client.Edge, error) {
+func (g *GraphClient) addEdge(n client.Node, pred string, v interface{}) (*client.Edge, error) {
 	e := n.Edge(pred)
 	switch v.(type) {
 	case string:
@@ -101,9 +121,9 @@ func (g *GraphClient) AddEdge(n client.Node, pred string, v interface{}) (*clien
 	}
 }
 
-func (g *GraphClient) AddEdges(n client.Node, p map[string]interface{}) (array []*client.Edge, err error) {
+func (g *GraphClient) addEdges(n client.Node, p map[string]interface{}) (array []*client.Edge, err error) {
 	for k, v := range p {
-		e, err := g.AddEdge(n, k, v)
+		e, err := g.addEdge(n, k, v)
 		if err != nil {
 			return nil, err
 		}
@@ -112,7 +132,7 @@ func (g *GraphClient) AddEdges(n client.Node, p map[string]interface{}) (array [
 	return array, nil
 }
 
-func (g *GraphClient) AddToRequest(req *client.Req, array []*client.Edge) (err error) {
+func (g *GraphClient) addToRequest(req *client.Req, array []*client.Edge) (err error) {
 	for _, e := range array {
 		err = req.Set(*e)
 		if err != nil {
@@ -130,7 +150,7 @@ func (g *GraphClient) ExistID(id string) (bool, error) {
 	}`
 	p := make(map[string]string)
 	p["$id"] = id
-	req := g.CreateRequestWithVariable(q, p)
+	req := g.createRequestWithVariable(q, p)
 	resp, err := g.run(req)
 	if err != nil {
 		return false, err
@@ -152,7 +172,7 @@ func (g *GraphClient) Exist(stack, ip, host string) (bool, error) {
 	p["$stack"] = stack
 	p["$ip"] = ip
 	p["$host"] = host
-	req := g.CreateRequestWithVariable(q, p)
+	req := g.createRequestWithVariable(q, p)
 	resp, err := g.run(req)
 	if err != nil {
 		return false, err
@@ -182,7 +202,7 @@ func (g *GraphClient) DeleteNode(id string) error {
 	}
 	}
 	`
-	req := g.CreateRequest(q)
+	req := g.createRequest(q)
 	if _, err := g.run(req); err != nil {
 		return err
 	}
@@ -204,11 +224,11 @@ func (g *GraphClient) InsertNode(info *pb.ContainerInfo) error {
 	if e != nil {
 		return e
 	}
-	array, e := g.AddEdges(n, params)
+	array, e := g.addEdges(n, params)
 	if e != nil {
 		return e
 	}
-	e = g.AddToRequest(&req, array)
+	e = g.addToRequest(&req, array)
 	if e != nil {
 		return e
 	}
@@ -263,7 +283,7 @@ func (g *GraphClient) FindNodeById(id string) (n *Node, err error) {
 	}`
 	m := make(map[string]string)
 	m["$id"] = id
-	req := g.CreateRequestWithVariable(q, m)
+	req := g.createRequestWithVariable(q, m)
 	resp, err := g.run(req)
 	if err != nil {
 		return nil, err
@@ -296,7 +316,7 @@ func (g *GraphClient) FindNodeByIp(ip string) (n *Node, err error) {
 	}`
 	m := make(map[string]string)
 	m["$ip"] = ip
-	req := g.CreateRequestWithVariable(q, m)
+	req := g.createRequestWithVariable(q, m)
 	resp, err := g.run(req)
 	if err != nil {
 		return nil, err
@@ -329,7 +349,7 @@ func (g *GraphClient) FindByStack(stack string) (nodes *[]Node, err error) {
 	}`
 	m := make(map[string]string)
 	m["$stack"] = stack
-	req := g.CreateRequestWithVariable(q, m)
+	req := g.createRequestWithVariable(q, m)
 	resp, err := g.run(req)
 	if err != nil {
 		return nil, err

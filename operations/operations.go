@@ -16,11 +16,11 @@ type clientEvent struct {
 }
 
 type server struct {
-	graph    *graph.GraphClient
+	graph    graph.IGraph
 	streamer *chan []byte
 }
 
-func NewGrpcOperations(stream *chan []byte, graph *graph.GraphClient) *grpc.Server {
+func NewGrpcOperations(stream *chan []byte, graph graph.IGraph) *grpc.Server {
 	grpcServer := grpc.NewServer()
 	pb.RegisterContainerServiceServer(grpcServer, &server{graph: graph, streamer: stream})
 	return grpcServer
