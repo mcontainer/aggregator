@@ -13,8 +13,32 @@ import (
 )
 
 const (
-	dgraph = "127.0.0.1:9080"
+	DGRAPH_ENDPOINT = "127.0.0.1:9080"
 )
+
+func setupGrpcConnection() *grpc.ClientConn {
+	c, e := grpc.Dial(DGRAPH_ENDPOINT, grpc.WithInsecure())
+	if e != nil {
+		log.WithField("Error", e.Error()).Fatal("Cannot open grpc connection to the database")
+	}
+	return c
+}
+
+func setupDatabaseDir() string {
+	d, e := ioutil.TempDir("", "client_")
+	if e != nil {
+		log.WithField("Error", e.Error()).Fatal("Cannot create temporary database directory")
+	}
+	return d
+}
+
+func setupGrpcListener() net.Listener {
+	l, e := net.Listen("tcp", ":10000")
+	if e != nil {
+		log.WithField("Error", e).Fatal("Cannot create grpc listener")
+	}
+	return l
+}
 
 func main() {
 
@@ -22,36 +46,20 @@ func main() {
 
 	go sse.Start(&streamChannel)
 
-	conn, err := grpc.Dial(dgraph, grpc.WithInsecure())
-	if err != nil {
-		log.Fatal(err)
-	}
+	conn := setupGrpcConnection()
 	defer conn.Close()
 
-	clientDir, err := ioutil.TempDir("", "client_")
-	if err != nil {
-		log.Fatal(err)
-	}
+	clientDir := setupDatabaseDir()
 	defer os.RemoveAll(clientDir)
 
 	g := graph.NewGraphClient(conn, clientDir)
-
 	restServer := rest.NewRestServer(g)
 
 	go restServer.Listen()
 
-	err = g.InitializedSchema()
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	defer g.Close()
 
-	listener, err := net.Listen("tcp", ":10000")
-	if err != nil {
-		log.Fatal(err)
-	}
+	listener := setupGrpcListener()
 
 	log.Info("Starting grpc server")
 

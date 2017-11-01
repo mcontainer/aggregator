@@ -61,7 +61,11 @@ type IGraph interface {
 
 func NewGraphClient(connection *grpc.ClientConn, dir string) IGraph {
 	log.Info("Creating a graph client")
-	return &GraphClient{cli: client.NewDgraphClient([]*grpc.ClientConn{connection}, client.DefaultOptions, dir)}
+	graph := &GraphClient{cli: client.NewDgraphClient([]*grpc.ClientConn{connection}, client.DefaultOptions, dir)}
+	if graph.InitializedSchema() != nil {
+		log.Fatal("Error while initializing schema")
+	}
+	return graph
 }
 
 func (g *GraphClient) InitializedSchema() error {
