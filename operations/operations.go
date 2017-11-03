@@ -20,55 +20,68 @@ type server struct {
 	streamer *chan []byte
 }
 
+const (
+	EVENT_ADD     = "ADD"
+	EVENT_DELETE  = "DELETE"
+	EVENT_CONNECT = "CONNECT"
+)
+
 func NewGrpcOperations(stream *chan []byte, graph graph.IGraph) *grpc.Server {
 	grpcServer := grpc.NewServer()
 	pb.RegisterContainerServiceServer(grpcServer, &server{graph: graph, streamer: stream})
 	return grpcServer
 }
 
+func setClientEvent(action string, data interface{}) clientEvent {
+	return clientEvent{
+		Action:  action,
+		Payload: data,
+	}
+}
+
 func (s *server) AddNode(ctx context.Context, containers *pb.ContainerInfo) (*pb.Response, error) {
 	log.WithField("Node", containers).Info("Inserting node")
 	exist, e := s.graph.ExistID(containers.Id)
 	if e != nil {
-		log.WithField("error", e).Warn("Add node")
+		log.WithField("error", e).Error("Error while checking if node exist")
 		return nil, e
 	}
 	if !exist {
 		e := s.graph.InsertNode(containers)
-		event := clientEvent{
-			Action:  "ADD",
-			Payload: containers,
+		if e != nil {
+			log.WithField("error", e).Error("Error while inserting node")
+			return nil, e
 		}
+		event := setClientEvent(EVENT_ADD, containers)
 		b, err := json.Marshal(event)
 		if err != nil {
-			log.Warn(err)
+			log.WithField("error", err).Error("Error while marshalling event client")
 			return nil, err
 		}
 		*s.streamer <- b
-		if e != nil {
-			return nil, e
-		}
 	} else {
 		log.Info("Node " + containers.Id + " already exists")
 	}
 	return &pb.Response{Success: true}, nil
 }
 
-
 func (s *server) RemoveNode(ctx context.Context, containers *pb.ContainerID) (*pb.Response, error) {
-	exist, _ := s.graph.ExistID(containers.Id)
+	exist, e := s.graph.ExistID(containers.Id)
+	if e != nil {
+		log.WithField("error", e).Error("Error while checking if node exist")
+		return nil, e
+	}
 	if exist {
 		e := s.graph.DeleteNode(containers.Id)
 		if e != nil {
-			log.Warn(e)
+			log.WithField("error", e).Error("Error while removing node")
+			return nil, e
 		} else {
-			event := clientEvent{
-				Action:  "DELETE",
-				Payload: containers,
-			}
+			event := setClientEvent(EVENT_DELETE, containers)
 			b, err := json.Marshal(event)
 			if err != nil {
-				log.Warn(err)
+				log.WithField("error", err).Error("Error while marshalling event client")
+				return nil, err
 			} else {
 				*s.streamer <- b
 			}
@@ -96,19 +109,15 @@ func (s *server) StreamContainerEvents(stream pb.ContainerService_StreamContaine
 
 		connection, err := s.graph.Connect(event)
 		if err != nil {
-			log.Warn(err)
+			log.WithField("error", err).Error("Error while connecting node")
 		} else {
-			data := clientEvent{
-				Action:  "CONNECT",
-				Payload: connection,
-			}
+			data := setClientEvent(EVENT_CONNECT, connection)
 			b, err := json.Marshal(data)
 			if err != nil {
-				log.Warn(err)
+				log.WithField("error", err).Error("Error while marshalling event client")
 			} else {
 				*s.streamer <- b
 			}
 		}
-
 	}
 }

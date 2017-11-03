@@ -41,12 +41,6 @@ type Connection struct {
 
 type IGraph interface {
 	InitializedSchema() error
-	createRequest(q string) client.Req
-	createRequestWithVariable(q string, v map[string]string) client.Req
-	addFacet(e *client.Edge, key string, value string)
-	addEdge(n client.Node, pred string, v interface{}) (*client.Edge, error)
-	addEdges(n client.Node, p map[string]interface{}) (array []*client.Edge, err error)
-	addToRequest(req *client.Req, array []*client.Edge) (err error)
 	ExistID(id string) (bool, error)
 	Exist(stack, ip, host string) (bool, error)
 	DeleteNode(id string) error
@@ -55,7 +49,6 @@ type IGraph interface {
 	FindNodeById(id string) (n *Node, err error)
 	FindNodeByIp(ip string) (n *Node, err error)
 	FindByStack(stack string) (nodes *[]Node, err error)
-	run(request client.Req) (*protos.Response, error)
 	Close()
 }
 
