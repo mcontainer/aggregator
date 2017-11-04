@@ -4,40 +4,21 @@ import (
 	"docker-visualizer/aggregator/graph"
 	"docker-visualizer/aggregator/sse"
 	log "github.com/sirupsen/logrus"
-	"google.golang.org/grpc"
-	"io/ioutil"
-	"net"
 	"os"
 	"docker-visualizer/aggregator/operations"
 	"docker-visualizer/aggregator/rest"
+	"docker-visualizer/aggregator/version"
+	"docker-visualizer/aggregator/utils"
 )
 
-const (
-	DGRAPH_ENDPOINT = "127.0.0.1:9080"
+var (
+	VERSION string
+	COMMIT  string
+	BRANCH  string
 )
 
-func setupGrpcConnection() *grpc.ClientConn {
-	c, e := grpc.Dial(DGRAPH_ENDPOINT, grpc.WithInsecure())
-	if e != nil {
-		log.WithField("Error", e.Error()).Fatal("Cannot open grpc connection to the database")
-	}
-	return c
-}
-
-func setupDatabaseDir() string {
-	d, e := ioutil.TempDir("", "client_")
-	if e != nil {
-		log.WithField("Error", e.Error()).Fatal("Cannot create temporary database directory")
-	}
-	return d
-}
-
-func setupGrpcListener() net.Listener {
-	l, e := net.Listen("tcp", ":10000")
-	if e != nil {
-		log.WithField("Error", e).Fatal("Cannot create grpc listener")
-	}
-	return l
+func init() {
+	version.Info(VERSION, COMMIT, BRANCH)
 }
 
 func main() {
@@ -46,10 +27,10 @@ func main() {
 
 	go sse.Start(&streamChannel)
 
-	conn := setupGrpcConnection()
+	conn := utils.SetupGrpcConnection()
 	defer conn.Close()
 
-	clientDir := setupDatabaseDir()
+	clientDir := utils.SetupDatabaseDir()
 	defer os.RemoveAll(clientDir)
 
 	g := graph.NewGraphClient(conn, clientDir)
@@ -59,7 +40,7 @@ func main() {
 
 	defer g.Close()
 
-	listener := setupGrpcListener()
+	listener := utils.SetupGrpcListener()
 
 	log.Info("Starting grpc server")
 
