@@ -7,9 +7,9 @@ import (
 	"errors"
 	"github.com/dgraph-io/dgraph/client"
 	"github.com/dgraph-io/dgraph/protos"
-	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"strconv"
+	"docker-visualizer/aggregator/log"
 )
 
 type GraphClient struct {

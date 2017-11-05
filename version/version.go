@@ -9,13 +9,11 @@ import (
 
 const (
 	templateVersion = `
-	Version: {{.Version}}
-	Commit: {{.Commit}}
-	Branch: {{.Branch}}
-	OS/Arch: {{.Os}}/{{.Arch}}
-	Go version: {{.GoVersion}}
-
-	`
+Version: {{.Version}}
+Commit: {{.Commit}}
+Branch: {{.Branch}}
+OS/Arch: {{.Os}}/{{.Arch}}
+Go version: {{.GoVersion}}`
 )
 
 func Info(version, commit, branch string) error {

@@ -3,12 +3,12 @@ package main
 import (
 	"docker-visualizer/aggregator/graph"
 	"docker-visualizer/aggregator/sse"
-	log "github.com/sirupsen/logrus"
 	"os"
 	"docker-visualizer/aggregator/operations"
 	"docker-visualizer/aggregator/rest"
 	"docker-visualizer/aggregator/version"
 	"docker-visualizer/aggregator/utils"
+	"docker-visualizer/aggregator/log"
 )
 
 var (

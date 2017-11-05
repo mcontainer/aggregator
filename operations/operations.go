@@ -1,13 +1,13 @@
 package operations
 
 import (
-	log "github.com/sirupsen/logrus"
 	pb "docker-visualizer/proto/containers"
 	"encoding/json"
 	"golang.org/x/net/context"
 	"docker-visualizer/aggregator/graph"
 	"io"
 	"google.golang.org/grpc"
+	"docker-visualizer/aggregator/log"
 )
 
 type clientEvent struct {
@@ -100,12 +100,11 @@ func (s *server) StreamContainerEvents(stream pb.ContainerService_StreamContaine
 			return err
 		}
 
-		log.WithFields(log.Fields{
-			"ipSrc":       event.IpSrc,
-			"ipDst":       event.IpDst,
-			"packet size": event.Size,
-			"stack":       event.Stack,
-		}).Info("Received")
+		log.
+			WithField("ipSrc", event.IpSrc).
+			WithField("ipDst", event.IpDst).
+			WithField("packet size", event.Size).
+			WithField("stack", event.Stack).Info("Received")
 
 		connection, err := s.graph.Connect(event)
 		if err != nil {

@@ -2,8 +2,8 @@ package sse
 
 import (
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"net/http"
+	"docker-visualizer/aggregator/log"
 )
 
 type Broker struct {

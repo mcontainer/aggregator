@@ -5,7 +5,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"net/http"
 	"encoding/json"
-	log "github.com/sirupsen/logrus"
+	"docker-visualizer/aggregator/log"
 )
 
 type Handler struct {

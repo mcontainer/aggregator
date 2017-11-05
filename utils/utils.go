@@ -3,8 +3,8 @@ package utils
 import (
 	"io/ioutil"
 	"net"
-	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
+	"docker-visualizer/aggregator/log"
 )
 
 const (
