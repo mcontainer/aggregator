@@ -2,13 +2,13 @@ package main
 
 import (
 	"docker-visualizer/aggregator/graph"
-	"docker-visualizer/aggregator/sse"
-	"os"
+	"docker-visualizer/aggregator/log"
 	"docker-visualizer/aggregator/operations"
 	"docker-visualizer/aggregator/rest"
-	"docker-visualizer/aggregator/version"
+	"docker-visualizer/aggregator/sse"
 	"docker-visualizer/aggregator/utils"
-	"docker-visualizer/aggregator/log"
+	"docker-visualizer/aggregator/version"
+	"os"
 )
 
 var (
@@ -22,7 +22,6 @@ func init() {
 }
 
 func main() {
-
 	streamChannel := make(chan []byte)
 
 	go sse.Start(&streamChannel)

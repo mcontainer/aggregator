@@ -1,10 +1,10 @@
 package utils
 
 import (
+	"docker-visualizer/aggregator/log"
+	"google.golang.org/grpc"
 	"io/ioutil"
 	"net"
-	"google.golang.org/grpc"
-	"docker-visualizer/aggregator/log"
 )
 
 const (

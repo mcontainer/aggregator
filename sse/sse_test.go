@@ -1,8 +1,8 @@
 package sse
 
 import (
-	"testing"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestNewSse(t *testing.T) {

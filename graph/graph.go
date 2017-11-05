@@ -3,13 +3,13 @@ package graph
 import (
 	"bytes"
 	"context"
+	"docker-visualizer/aggregator/log"
 	pb "docker-visualizer/proto/containers"
 	"errors"
 	"github.com/dgraph-io/dgraph/client"
 	"github.com/dgraph-io/dgraph/protos"
 	"google.golang.org/grpc"
 	"strconv"
-	"docker-visualizer/aggregator/log"
 )
 
 type GraphClient struct {

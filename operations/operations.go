@@ -1,13 +1,13 @@
 package operations
 
 import (
+	"docker-visualizer/aggregator/graph"
+	"docker-visualizer/aggregator/log"
 	pb "docker-visualizer/proto/containers"
 	"encoding/json"
 	"golang.org/x/net/context"
-	"docker-visualizer/aggregator/graph"
-	"io"
 	"google.golang.org/grpc"
-	"docker-visualizer/aggregator/log"
+	"io"
 )
 
 type clientEvent struct {

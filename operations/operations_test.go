@@ -1,13 +1,13 @@
 package operations
 
 import (
-	"testing"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
+	"context"
 	"docker-visualizer/aggregator/graph"
 	pb "docker-visualizer/proto/containers"
-	"context"
 	"errors"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"testing"
 )
 
 type graphMock struct {

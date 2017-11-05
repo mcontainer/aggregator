@@ -1,10 +1,10 @@
 package version
 
 import (
-	"html/template"
-	"runtime"
-	"os"
 	"fmt"
+	"html/template"
+	"os"
+	"runtime"
 )
 
 const (
@@ -25,11 +25,11 @@ func Info(version, commit, branch string) error {
 		Arch      string
 		GoVersion string
 	}{
-		Version: version,
-		Commit:  commit,
-		Branch:  branch,
-		Os:      runtime.GOOS,
-		Arch:    runtime.GOARCH,
+		Version:   version,
+		Commit:    commit,
+		Branch:    branch,
+		Os:        runtime.GOOS,
+		Arch:      runtime.GOARCH,
 		GoVersion: runtime.Version(),
 	}
 	if e := printVersion(v); e != nil {

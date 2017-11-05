@@ -2,10 +2,10 @@ package rest
 
 import (
 	"docker-visualizer/aggregator/graph"
+	"docker-visualizer/aggregator/log"
+	"encoding/json"
 	"github.com/julienschmidt/httprouter"
 	"net/http"
-	"encoding/json"
-	"docker-visualizer/aggregator/log"
 )
 
 type Handler struct {

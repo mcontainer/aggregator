@@ -1,9 +1,9 @@
 package sse
 
 import (
+	"docker-visualizer/aggregator/log"
 	"fmt"
 	"net/http"
-	"docker-visualizer/aggregator/log"
 )
 
 type Broker struct {

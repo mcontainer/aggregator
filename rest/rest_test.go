@@ -1,14 +1,14 @@
 package rest
 
 import (
-	"github.com/stretchr/testify/mock"
-	"net/http"
-	"testing"
 	"docker-visualizer/aggregator/graph"
 	pb "docker-visualizer/proto/containers"
-	"github.com/stretchr/testify/assert"
 	"errors"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"net/http"
 	"net/http/httptest"
+	"testing"
 )
 
 type graphMock struct {
