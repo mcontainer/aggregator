@@ -8,7 +8,6 @@ import (
 	"docker-visualizer/aggregator/sse"
 	"docker-visualizer/aggregator/utils"
 	"docker-visualizer/aggregator/version"
-	"os"
 )
 
 var (
@@ -29,15 +28,10 @@ func main() {
 	conn := utils.SetupGrpcConnection()
 	defer conn.Close()
 
-	clientDir := utils.SetupDatabaseDir()
-	defer os.RemoveAll(clientDir)
-
-	g := graph.NewGraphClient(conn, clientDir)
+	g := graph.NewGraphClient(conn)
 	restServer := rest.NewRestServer(g)
 
 	go restServer.Listen()
-
-	defer g.Close()
 
 	listener := utils.SetupGrpcListener()
 
