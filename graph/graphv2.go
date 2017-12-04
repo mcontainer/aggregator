@@ -275,6 +275,7 @@ func (g *GraphClient) Connect(event *pb.ContainerEvent) (*Connection, error) {
 	}
 	type node struct {
 		Uid       string `json:"uid,omitempty"`
+		Id        string `json:"id,omitempty"`
 		Connected []node `json:"connected,omitempty"`
 		Parent    []node `json:"parent,omitempty"`
 	}
@@ -288,7 +289,6 @@ func (g *GraphClient) Connect(event *pb.ContainerEvent) (*Connection, error) {
 	if e != nil {
 		return nil, e
 	}
-	fmt.Printf("Fetch %+v\n", rootNode)
 
 	rootNode.Src[0].Connected = append(rootNode.Src[0].Connected, rootNode.Dest[0])
 	rootNode.Dest[0].Parent = append(rootNode.Dest[0].Parent, rootNode.Src[0])
@@ -317,7 +317,7 @@ func (g *GraphClient) Connect(event *pb.ContainerEvent) (*Connection, error) {
 
 	fmt.Println(assigned.Uids)
 
-	return nil, nil
+	return &Connection{Src: rootNode.Src[0].Id, Dst: rootNode.Dest[0].Id, Size: event.Size}, nil
 }
 
 func (g *GraphClient) FindNodeById(id string) (n []byte, err error) {
