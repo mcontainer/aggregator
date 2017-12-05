@@ -2,8 +2,8 @@ package rest
 
 import (
 	"docker-visualizer/aggregator/graph"
-	"docker-visualizer/aggregator/log"
 	"github.com/julienschmidt/httprouter"
+	log "github.com/sirupsen/logrus"
 	"net/http"
 )
 

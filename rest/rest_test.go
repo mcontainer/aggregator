@@ -45,19 +45,19 @@ func (m *graphMock) Connect(event *pb.ContainerEvent) (*graph.Connection, error)
 	return args.Get(0).(*graph.Connection), args.Error(1)
 }
 
-func (m *graphMock) FindNodeById(id string) (n *graph.Node, err error) {
+func (m *graphMock) FindNodeById(id string) (n []byte, err error) {
 	args := m.Called(id)
-	return args.Get(0).(*graph.Node), args.Error(1)
+	return args.Get(0).([]byte), args.Error(1)
 }
 
-func (m *graphMock) FindNodeByIp(ip string) (n *graph.Node, err error) {
+func (m *graphMock) FindNodeByIp(ip string) (n []byte, err error) {
 	args := m.Called(ip)
-	return args.Get(0).(*graph.Node), args.Error(1)
+	return args.Get(0).([]byte), args.Error(1)
 }
 
-func (m *graphMock) FindByStack(stack string) (nodes *[]graph.Node, err error) {
+func (m *graphMock) FindByStack(stack string) (nodes []byte, err error) {
 	args := m.Called(stack)
-	return args.Get(0).(*[]graph.Node), args.Error(1)
+	return args.Get(0).([]byte), args.Error(1)
 }
 
 func (m *graphMock) Close() {
@@ -71,12 +71,8 @@ func TestNewRestServer(t *testing.T) {
 
 func TestFetchTopologyOK(t *testing.T) {
 	m := graphMock{}
-	n := []graph.Node{
-		{
-			Id: "123",
-		},
-	}
-	m.On("FindByStack", "toto").Return(&n, nil)
+	b := []byte("123")
+	m.On("FindByStack", "toto").Return(b, nil)
 
 	server := NewRestServer(&m)
 	w := httptest.NewRecorder()
@@ -94,7 +90,7 @@ func TestFetchTopologyOK(t *testing.T) {
 
 func TestFetchTopology500(t *testing.T) {
 	m := graphMock{}
-	m.On("FindByStack", "toto").Return(&[]graph.Node{}, errors.New("custom error"))
+	m.On("FindByStack", "toto").Return([]byte{}, errors.New("custom error"))
 
 	server := NewRestServer(&m)
 

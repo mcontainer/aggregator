@@ -2,12 +2,12 @@ package main
 
 import (
 	"docker-visualizer/aggregator/graph"
-	"docker-visualizer/aggregator/log"
 	"docker-visualizer/aggregator/operations"
 	"docker-visualizer/aggregator/rest"
 	"docker-visualizer/aggregator/sse"
 	"docker-visualizer/aggregator/utils"
 	"docker-visualizer/aggregator/version"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -22,7 +22,6 @@ func init() {
 
 func main() {
 	streamChannel := make(chan []byte)
-
 	go sse.Start(&streamChannel)
 
 	conn := utils.SetupGrpcConnection()

@@ -44,19 +44,19 @@ func (m *graphMock) Connect(event *pb.ContainerEvent) (*graph.Connection, error)
 	return args.Get(0).(*graph.Connection), args.Error(1)
 }
 
-func (m *graphMock) FindNodeById(id string) (n *graph.Node, err error) {
+func (m *graphMock) FindNodeById(id string) (n []byte, err error) {
 	args := m.Called(id)
-	return args.Get(0).(*graph.Node), args.Error(1)
+	return args.Get(0).([]byte), args.Error(1)
 }
 
-func (m *graphMock) FindNodeByIp(ip string) (n *graph.Node, err error) {
+func (m *graphMock) FindNodeByIp(ip string) (n []byte, err error) {
 	args := m.Called(ip)
-	return args.Get(0).(*graph.Node), args.Error(1)
+	return args.Get(0).([]byte), args.Error(1)
 }
 
-func (m *graphMock) FindByStack(stack string) (nodes *[]graph.Node, err error) {
+func (m *graphMock) FindByStack(stack string) (nodes []byte, err error) {
 	args := m.Called(stack)
-	return args.Get(0).(*[]graph.Node), args.Error(1)
+	return args.Get(0).([]byte), args.Error(1)
 }
 
 func (m *graphMock) Close() {
