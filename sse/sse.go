@@ -1,8 +1,8 @@
 package sse
 
 import (
-	"docker-visualizer/aggregator/log"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"net/http"
 )
 

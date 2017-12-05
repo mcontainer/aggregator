@@ -2,9 +2,8 @@ package rest
 
 import (
 	"docker-visualizer/aggregator/graph"
-	"docker-visualizer/aggregator/log"
-	"encoding/json"
 	"github.com/julienschmidt/httprouter"
+	log "github.com/sirupsen/logrus"
 	"net/http"
 )
 
@@ -27,14 +26,9 @@ func (h *Handler) fetchTopologyByStack(w http.ResponseWriter, r *http.Request, p
 		log.Error(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-	b, err := json.Marshal(resp)
-	if err != nil {
-		log.Error(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Write(b)
+	w.Write(resp)
 }
 
 func NewRestServer(graph graph.IGraph) IRestServer {

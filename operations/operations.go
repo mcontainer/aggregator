@@ -2,9 +2,9 @@ package operations
 
 import (
 	"docker-visualizer/aggregator/graph"
-	"docker-visualizer/aggregator/log"
 	pb "docker-visualizer/proto/containers"
 	"encoding/json"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"io"
